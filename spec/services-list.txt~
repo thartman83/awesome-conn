@@ -1,0 +1,6 @@
+    OtherNET                wifi_dc85de828967_38303944616e69656c73_managed_psk 
+    AnotherOne              wifi_dc85de828967_3257495245363836_managed_wep
+    FourthNetwork           wifi_dc85de828967_4d7572706879_managed_wep
+    AnOpenNetwork           wifi_dc85de828967_4d6568657272696e_managed_none
+connmanctl service
+*AO Wired                ethernet_080027606158_cable

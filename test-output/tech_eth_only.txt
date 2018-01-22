@@ -1,0 +1,6 @@
+/net/connman/technology/ethernet
+  Name = Wired
+  Type = ethernet
+  Powered = True
+  Connected = True
+  Tethering = False
