@@ -40,8 +40,8 @@ local err_msg        = ""
 -- Helper string function to remove whitespace from beginning and end
 -- of a string
 ----------------------------------------------------------------------
-function s.trim (s)
-   return (s:gsub("^%s*(.-)%s*$","%1"))
+function s.trim (str)
+   return (str:gsub("^%s*(.-)%s*$","%1"))
 end
 -- }}}
 
@@ -98,16 +98,19 @@ end
 
 --- gtable.noblanks -- {{{
 ----------------------------------------------------------------------
--- Return a new table with no blanks in it
+-- Return a new table with no blanks in it. If nowhitespaces is set to
+-- true also remove any entries that are all whitespaces.
 ----------------------------------------------------------------------
-function gtable.noblanks (t)
-   local retval = {}
+function gtable.noblanks (t, nowhitespaces)
+   local retval = {}   
    for k,v in pairs(t) do
       if v ~= "" and v ~= nil then
-         if type(k) == "number" then
-            table.insert(retval,v)
-         else
-            retval[k] = v
+         if not nowhitespaces or not (v == v:match("(%s*)")) then
+            if type(k) == "number" then
+               table.insert(retval,v)
+            else
+               retval[k] = v
+            end
          end
       end
    end
@@ -198,23 +201,24 @@ end
 ----------------------------------------------------------------------
 -- Parse connman information from an individual service
 ----------------------------------------------------------------------
-local function connmanctl_parse_service (service)
+local function connmanctl_parse_service (service)   
    local retval = {}
    local lines = gtable.noblanks(s.lines(service))
-
+   
    local service_path = table.remove(lines,1)
    retval["servicepath"] = service_path
 
    for _, line in ipairs(lines) do
       local parts = s.split(line, "=")
-      local key   = s.trim(parts[1])
-      local val   = s.trim(parts[2])
+      local key   = s.trim(table.remove(parts,1))
+      local val   = (#parts == 1 and s.trim(parts[1]) or
+                        s.trim(s.join(parts,"=")))
 
       if val == "True" or val == "False" then
          retval[key] = val == "True"
       elseif val:sub(1,1) == "[" then
          retval[key] = {}
-         local subparts = s.split(val:sub(2,-2),",")
+         local subparts = gtable.noblanks(s.split(val:sub(2,-2),","), true)
          for _,subpart in ipairs(subparts) do
             local subsubparts = s.split(subpart,"=")
 
