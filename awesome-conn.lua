@@ -20,19 +20,13 @@
 -- }}}
 
 --- awesome-conn  -- {{{
--- local wibox = require('wibox'       )
--- local awful = require('awful'       )
+local wibox  = require('wibox'       )
+local awful  = require('awful'       )
 local s      = require('gears.string')
 local gtable = require('gears.table' )
+local dbg    = require('debugger'    )
 
 local capi           = {timer=timer}
-
-local techs          = {}
-local services       = {}
-local display        = ""
-local connmanctl_cmd = "/usr/bin/connmanctl"
-local err_msg        = ""
-local update_mutex   = 0
 
 --- String Helper Functions -- {{{
 
@@ -121,8 +115,57 @@ end
 
 -- }}}
 
---- connmanctl parsing functions -- {{{
--- A set of functions to parse the output from connmanctl into lua tables
+--- semaphore Functions -- {{{
+
+local semaphore = { }
+semaphore.__index = semaphore
+
+setmetatable(semaphore, { __call = function (s, ...) return s.new(...) end, })
+
+function semaphore.new()
+   local obj = setmetatable({}, semaphore)
+   obj.count = 0
+   return obj
+end
+
+function semaphore:increment(n)
+   local n = n or 1
+   self.count = self.count + n
+end
+
+function semaphore:decrement()
+   self.count = self.count - 1
+end
+
+function semaphore:isFree()
+   return self.count == 0
+end
+
+function semaphore:clear()
+   self.count = 0
+end
+
+-- }}}
+
+--- constructor -- {{{
+----------------------------------------------------------------------
+-- 
+----------------------------------------------------------------------
+local ac = {}
+ac.__index = ac
+setmetatable(ac, {__call = function (a, ...) return ac.new(...) end })
+
+function ac.new (args)
+   local args = args or {}
+   local connmanctl_cmd = args.connmanctl_cmd or "/usr/bin/connmanctl"
+   
+   local obj           = setmetatable({}, ac)
+   obj.services        = {}
+   obj.connmanctl_cmd  = connmanctl_cmd
+   obj.updateCount     = semaphore.new()
+   return obj
+end
+-- }}}
 
 --- connmanctl_parse_technologies -- {{{
 ----------------------------------------------------------------------
@@ -134,7 +177,7 @@ end
 --  - bluetooth
 --  - cellular
 ----------------------------------------------------------------------
-local function connmanctl_parse_technologies (technologies)
+function ac:connmanctl_parse_technologies (technologies)
    local lines = s.lines(technologies)
 
    -- Pop the first line
@@ -190,7 +233,7 @@ end
 --                                }
 --     }
 ----------------------------------------------------------------------
-local function connmanctl_parse_services_list (services_list)
+function ac:connmanctl_parse_services_list (services_list)
    local retval = {}
    
    local lines = gtable.noblanks(s.lines(services_list))
@@ -227,7 +270,7 @@ end
 -- Parse the output of `connmanctl services [servicename]' into a
 -- table with kv pairs for each service property.
 ----------------------------------------------------------------------
-local function connmanctl_parse_service (service)   
+function ac:connmanctl_parse_service (service)
    local retval = {}
    local lines = gtable.noblanks(s.lines(service))
    
@@ -265,84 +308,53 @@ local function connmanctl_parse_service (service)
 end
 -- }}}
 
--- }}}
-
---- updateSemaphore Functions -- {{{
-
-local updateSemaphore = { count = 0 }
-
-function updateSemaphore:increment(n)
-   local n = n or 1
-   count = count + n
-end
-
-function updateSemaphore:decrement()
-   count = count - 1
-end
-
-function updateSemaphore:isFree()
-   return count == 0
-end
-
-function updateSemaphore:clear()
-   count = 0
-end
-
--- }}}
-
---- Misc Functions -- {{{
-
---- ServiceCount -- {{{
+--- serviceCount -- {{{
 ----------------------------------------------------------------------
 -- Return the number of services listed in the service table
 ----------------------------------------------------------------------
-function serviceCount (service_table)
+function ac:serviceCount ()
    local retval = 0
-   for _, t in ipairs(service_table) do
-      retval = #t
+   for _, t in pairs(self.services) do
+      retval = retval + #t
    end
    return retval
 end
 -- }}}
 
--- }}}
-
---- Update Functions -- {{{
-
---- updateServices -- {{{
+--- update -- {{{
 ----------------------------------------------------------------------
 -- 
 ----------------------------------------------------------------------
-function update (w)
-   updateSemaphore:clear()
-   
-   awful.spawn.easy_async(connmanctl .. " services",
+function ac:update ()
+   self.updateCount:clear()
+
+   awful.spawn.easy_async(self.connmanctl_cmd .. " services",
         function (stdout, stderr, exitreason, exitcode)           
            if stderr ~= "" then
               naughty.notify("An error occured while contacting connman: " .. stderr)
               return
            end
 
-           services = connmanctl_parse_services_list(stdout)
-           updateSemaphore:increment(serviceCount(services))
+           self.services = self:connmanctl_parse_services_list(stdout)
+           self.updateCount:increment(self:serviceCount())
            
            -- Loop over each technology service table
-           for _, s_list in ipairs(services) do
+           for _, s_list in pairs(self.services) do
               -- Loop over each service in the service table
               for _, s_tbl in ipairs(s_list) do
-                 awful.spawn.easy_async(connmanctl .. " services " ..
+                 awful.spawn.easy_async(self.connmanctl_cmd .. " services " ..
                                            s_tbl["ServiceName"],
                       function (stdout, stderr, exitreason, exitcode)
                          if stderr ~= "" then
                             naughty.notify("An error occured while contacting connman: " .. stderr)
                          else
-                            gtable.merge(s_list, connmanctl_parse_service(stdout))
+                            gtable.merge(s_list, self:connmanctl_parse_service(stdout))
                          end
 
-                         updateSemaphore:decrement()
+                         self.updateCount:decrement()
 
-                         if updateSemaphore:isFree() then
-                            updateMenu()
+                         if self.updateCount:isFree() then
+                            self:updateMenu()
                          end
                  end)
               end
@@ -355,26 +367,9 @@ end
 ----------------------------------------------------------------------
 -- Update the awesome-conn menu
 ----------------------------------------------------------------------
-local function updateMenu (w)
+function ac:updateMenu ()
 end
 -- }}}
 
--- }}}
-
---- new -- {{{
-----------------------------------------------------------------------
--- 
-----------------------------------------------------------------------
-local function new (args)
-   local w = {}
-   w.update = update
-   w.updateMenu = updateMenu
-   w.connmanctl_parse_technologies = connmanctl_parse_technologies
-   w.connmanctl_parse_services_list = connmanctl_parse_services_list
-   w.connmanctl_parse_service = connmanctl_parse_service
-   return w
-end
--- }}}
-
-return setmetatable({}, { __call = function(_, ...) return new(...) end })
+return ac
 -- }}}

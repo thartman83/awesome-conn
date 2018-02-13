@@ -40,3 +40,5 @@ luac.out
 *.hex
 
 /init.lua~
+/mocks/awful/init.lua~
+/mocks/awful/spawn.lua~

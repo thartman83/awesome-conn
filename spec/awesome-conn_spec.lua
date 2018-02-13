@@ -20,7 +20,7 @@
 
 --- awesome-conn tests -- {{{
 require 'busted.runner'()
-package.path = 'mocks/?.lua;./?.lua;' .. package.path
+package.path = 'mocks/?.lua;mocks/?/init.lua;./?.lua;' .. package.path
 
 --- Helper functions -- {{{
 
@@ -60,7 +60,7 @@ describe("a set of tests for connmanctl output parsing", function ()
        function ()
           local awesome_conn = require('awesome-conn')()
           local txt          = freadall("test-output/tech_eth_only.txt")
-          local t            = awesome_conn.connmanctl_parse_technologies(txt)
+          local t            = awesome_conn:connmanctl_parse_technologies(txt)
 
           assert.are.equal(1, #t)
           assert.are.equal("Wired"    , t[1]["Name"    ])
@@ -79,7 +79,7 @@ describe("a set of tests for connmanctl output parsing", function ()
        function ()
           local awesome_conn = require('awesome-conn')()
           local txt          = freadall("test-output/services-list.txt")
-          local t            = awesome_conn.connmanctl_parse_services_list(txt)
+          local t            = awesome_conn:connmanctl_parse_services_list(txt)
 
           assert.are.equal(2, #keys(t)                   )
           assert.are.equal(1, #t["ethernet_080027606158"])
@@ -111,7 +111,7 @@ describe("a set of tests for connmanctl output parsing", function ()
     it("should return a tbl w/ information about an eth service", function ()
           local awesome_conn = require('awesome-conn'    )()
           local txt          = freadall('test-output/services-output.txt')
-          local t            = awesome_conn.connmanctl_parse_service(txt)
+          local t            = awesome_conn:connmanctl_parse_service(txt)
 
           assert.are.equal(22, #keys(t))
           assert.are.equal("/net/connman/service/ethernet_080027606158_cable",
@@ -173,4 +173,16 @@ end)
 
 -- }}}
 
+--- awesome-conn update tests -- {{{
+describe("a suite of tests for the awesome-conn:update method", function()
+  it("should cycle through .", function ()
+        local awesome_conn = require('awesome-conn')()
+        spy.on(awesome_conn, "updateMenu")
+        
+        awesome_conn:update()
+        assert.are.equal(2,awesome_conn:serviceCount())
+        assert.spy(awesome_conn.updateMenu).was_called()
+  end)
+end)
+-- }}}
 -- }}}
