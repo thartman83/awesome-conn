@@ -28,10 +28,11 @@ local gtable = require('gears.table' )
 local capi           = {timer=timer}
 
 local techs          = {}
+local services       = {}
 local display        = ""
-local scanning       = nil
 local connmanctl_cmd = "/usr/bin/connmanctl"
 local err_msg        = ""
+local update_mutex   = 0
 
 --- String Helper Functions -- {{{
 
@@ -166,6 +167,28 @@ end
 --- connmanctl_parse_services_list -- {{{
 ----------------------------------------------------------------------
 -- Parse the list of servers grouping by technology
+--
+-- Parse the output of `connmanctl services' into a table with keys
+-- for each available device and sub tables of each available service
+-- to that device.
+--
+-- eg: { ethernet_080027606158 -> {
+--                                  {
+--                                    name -> Wired,
+--                                    ServiceName -> ethernet_080027606158_cable
+--                                  }
+--                                },
+--       wifi_dc85de828967 ->     {
+--                                  {
+--                                    name -> WifiNetwork,
+--                                    ServiceName -> wifi_dc85de828967_38303944616e69656c73_managed_psk
+--                                  },
+--                                  {
+--                                    name -> OtherWifiNetwork,
+--                                    ServiceName -> wifi_dc85de828967_32574952453638367_managed_wep
+--                                  }
+--                                }
+--     }
 ----------------------------------------------------------------------
 local function connmanctl_parse_services_list (services_list)
    local retval = {}
@@ -180,8 +203,8 @@ local function connmanctl_parse_services_list (services_list)
       service_name = parts[#parts == 3 and 3 or 2]
 
       local service_name_parts = s.split(service_name, "_")
-      local tech_name          = table.remove(service_name_parts,1) .. "_" ..
-         table.remove(service_name_parts,1)
+      local tech_name          = service_name_parts[1] .. "_" ..
+         service_name_parts[2]
       
       if retval[tech_name] == nil then
          retval[tech_name] = {}
@@ -189,7 +212,7 @@ local function connmanctl_parse_services_list (services_list)
 
       table.insert(retval[tech_name],
                    { Name = common_name,
-                     ServiceName = s.join(service_name_parts, "_") })
+                     ServiceName = service_name })
 
    end
 
@@ -200,6 +223,9 @@ end
 --- connmanctl_parse_service -- {{{
 ----------------------------------------------------------------------
 -- Parse connman information from an individual service
+--
+-- Parse the output of `connmanctl services [servicename]' into a
+-- table with kv pairs for each service property.
 ----------------------------------------------------------------------
 local function connmanctl_parse_service (service)   
    local retval = {}
@@ -241,13 +267,98 @@ end
 
 -- }}}
 
---- update -- {{{
+--- updateSemaphore Functions -- {{{
+
+local updateSemaphore = { count = 0 }
+
+function updateSemaphore:increment(n)
+   local n = n or 1
+   count = count + n
+end
+
+function updateSemaphore:decrement()
+   count = count - 1
+end
+
+function updateSemaphore:isFree()
+   return count == 0
+end
+
+function updateSemaphore:clear()
+   count = 0
+end
+
+-- }}}
+
+--- Misc Functions -- {{{
+
+--- ServiceCount -- {{{
+----------------------------------------------------------------------
+-- Return the number of services listed in the service table
+----------------------------------------------------------------------
+function serviceCount (service_table)
+   local retval = 0
+   for _, t in ipairs(service_table) do
+      retval = #t
+   end
+   return retval
+end
+-- }}}
+
+-- }}}
+
+--- Update Functions -- {{{
+
+--- updateServices -- {{{
 ----------------------------------------------------------------------
 -- 
 ----------------------------------------------------------------------
-local function update (w)
+function update (w)
+   updateSemaphore:clear()
+   
+   awful.spawn.easy_async(connmanctl .. " services",
+        function (stdout, stderr, exitreason, exitcode)           
+           if stderr ~= "" then
+              naughty.notify("An error occured while contacting connman: " .. stderr)
+              return
+           end
 
+           services = connmanctl_parse_services_list(stdout)
+           updateSemaphore:increment(serviceCount(services))
+           
+           -- Loop over each technology service table
+           for _, s_list in ipairs(services) do
+              -- Loop over each service in the service table
+              for _, s_tbl in ipairs(s_list) do
+                 awful.spawn.easy_async(connmanctl .. " services " ..
+                                           s_tbl["ServiceName"],
+                      function (stdout, stderr, exitreason, exitcode)
+                         if stderr ~= "" then
+                            naughty.notify("An error occured while contacting connman: " .. stderr)
+                         else
+                            gtable.merge(s_list, connmanctl_parse_service(stdout))
+                         end
+
+                         updateSemaphore:decrement()
+
+                         if updateSemaphore:isFree() then
+                            updateMenu()
+                         end
+                 end)
+              end
+           end
+   end)
 end
+-- }}}
+
+--- updateMenu -- {{{
+----------------------------------------------------------------------
+-- Update the awesome-conn menu
+----------------------------------------------------------------------
+local function updateMenu (w)
+end
+-- }}}
+
 -- }}}
 
 --- new -- {{{
@@ -256,6 +367,8 @@ end
 ----------------------------------------------------------------------
 local function new (args)
    local w = {}
+   w.update = update
+   w.updateMenu = updateMenu
    w.connmanctl_parse_technologies = connmanctl_parse_technologies
    w.connmanctl_parse_services_list = connmanctl_parse_services_list
    w.connmanctl_parse_service = connmanctl_parse_service

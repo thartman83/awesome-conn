@@ -54,7 +54,6 @@ end
 --- connmanctl parser tests -- {{{
 describe("a set of tests for connmanctl output parsing", function ()
 
-
   -- connmanctl_parse_technologies -- {{{
   describe("tests for parsing technology output", function ()
     it("should return a table with a single entry describing an ethernet port",
@@ -87,20 +86,21 @@ describe("a set of tests for connmanctl output parsing", function ()
           assert.are.equal(4, #t["wifi_dc85de828967"    ])
 
           assert.are.equal("Wired", t["ethernet_080027606158"][1]["Name"])
-          assert.are.equal("cable", t["ethernet_080027606158"][1]["ServiceName"])
+          assert.are.equal("ethernet_080027606158_cable",
+                           t["ethernet_080027606158"][1]["ServiceName"])
 
           assert.are.equal("OtherNET"     , t["wifi_dc85de828967"][1]["Name"])
           assert.are.equal("AnotherOne"   , t["wifi_dc85de828967"][2]["Name"])
           assert.are.equal("FourthNetwork", t["wifi_dc85de828967"][3]["Name"])
           assert.are.equal("AnOpenNetwork", t["wifi_dc85de828967"][4]["Name"])
           
-          assert.are.equal("38303944616e69656c73_managed_psk",
+          assert.are.equal("wifi_dc85de828967_38303944616e69656c73_managed_psk",
                            t["wifi_dc85de828967"][1]["ServiceName"])
-          assert.are.equal("3257495245363836_managed_wep",
+          assert.are.equal("wifi_dc85de828967_3257495245363836_managed_wep",
                            t["wifi_dc85de828967"][2]["ServiceName"])
-          assert.are.equal("4d7572706879_managed_wep",
+          assert.are.equal("wifi_dc85de828967_4d7572706879_managed_wep",
                            t["wifi_dc85de828967"][3]["ServiceName"])
-          assert.are.equal("4d6568657272696e_managed_none",
+          assert.are.equal("wifi_dc85de828967_4d6568657272696e_managed_none",
                            t["wifi_dc85de828967"][4]["ServiceName"])
     end)
   end)
