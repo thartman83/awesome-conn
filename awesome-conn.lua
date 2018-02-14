@@ -326,8 +326,8 @@ end
 -- 
 ----------------------------------------------------------------------
 function ac:update ()
+   
    self.updateCount:clear()
-
    awful.spawn.easy_async(self.connmanctl_cmd .. " services",
         function (stdout, stderr, exitreason, exitcode)           
            if stderr ~= "" then
@@ -348,7 +348,8 @@ function ac:update ()
                          if stderr ~= "" then
                             naughty.notify("An error occured while contacting connman: " .. stderr)
                          else
-                            gtable.merge(s_list, self:connmanctl_parse_service(stdout))
+                            dbg()
+                            gtable.crush(s_tbl, self:connmanctl_parse_service(stdout))
                          end
 
                          self.updateCount:decrement()
@@ -368,6 +369,7 @@ end
 -- Update the awesome-conn menu
 ----------------------------------------------------------------------
 function ac:updateMenu ()
+
 end
 -- }}}
 

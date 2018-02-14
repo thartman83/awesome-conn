@@ -36,5 +36,28 @@ function gtable.merge(t, set)
     return t
 end
 
+--- Override elements in the first table by the one in the second.
+--
+-- Note that this method doesn't copy entries found in `__index`.
+-- @class function
+-- @name crush
+-- @tparam table t the table to be overriden
+-- @tparam table set the table used to override members of `t`
+-- @tparam[opt=false] boolean raw Use rawset (avoid the metatable)
+-- @treturn table t (for convenience)
+function gtable.crush(t, set, raw)
+    if raw then
+        for k, v in pairs(set) do
+            rawset(t, k, v)
+        end
+    else
+        for k, v in pairs(set) do
+            t[k] = v
+        end
+    end
+
+    return t
+end
+
 return gtable
 -- }}}

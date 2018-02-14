@@ -182,6 +182,7 @@ describe("a suite of tests for the awesome-conn:update method", function()
         awesome_conn:update()
         assert.are.equal(2,awesome_conn:serviceCount())
         assert.spy(awesome_conn.updateMenu).was_called()
+        assert.is_true(awesome_conn.updateCount:isFree())
   end)
 end)
 -- }}}
