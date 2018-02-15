@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- init.lua for wibox mocks                                                  --
+-- init.lua for wibox.widget mocks                                           --
 -- Copyright (c) 2018 Tom Hartman (thomas.lees.hartman@gmail.com)            --
 --                                                                           --
 -- This program is free software; you can redistribute it and/or             --
@@ -15,9 +15,9 @@
 -------------------------------------------------------------------------------
 
 --- Commentary -- {{{
--- wibox mocks
+-- wibox.widget mocks
 -- }}}
 
---- wibox -- {{{
-return { widget = require('wibox.widget') }
+--- widget -- {{{
+return { imagebox = require('wibox.widget.imagebox') }
 -- }}}

@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- init.lua for wibox mocks                                                  --
+-- imagebox.lua for wibox.widget.imagebox mocks                              --
 -- Copyright (c) 2018 Tom Hartman (thomas.lees.hartman@gmail.com)            --
 --                                                                           --
 -- This program is free software; you can redistribute it and/or             --
@@ -15,9 +15,22 @@
 -------------------------------------------------------------------------------
 
 --- Commentary -- {{{
--- wibox mocks
+-- wibox.widget.imagebox mocks
 -- }}}
 
---- wibox -- {{{
-return { widget = require('wibox.widget') }
+--- wibox.widget.imagebox -- {{{
+local imgbox = {}
+imgbox.__index = imgbox
+
+setmetatable(imgbox, { __call = function (c, ...) return imgbox.new() end })
+
+function imgbox.new (...)
+   local obj = setmetatable({}, imgbox)
+   return obj
+end
+
+function imgbox:set_menu(...)
+end
+
+return imgbox
 -- }}}

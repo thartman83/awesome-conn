@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- init.lua for wibox mocks                                                  --
+-- init.lua for radical mocks                                                --
 -- Copyright (c) 2018 Tom Hartman (thomas.lees.hartman@gmail.com)            --
 --                                                                           --
 -- This program is free software; you can redistribute it and/or             --
@@ -15,9 +15,32 @@
 -------------------------------------------------------------------------------
 
 --- Commentary -- {{{
--- wibox mocks
+-- radical mocks
 -- }}}
 
---- wibox -- {{{
-return { widget = require('wibox.widget') }
+local dbg = require ('debugger')
+
+--- radical -- {{{
+local menu = {}
+menu.__index = menu
+
+--- menu:add_item -- {{{
+----------------------------------------------------------------------
+-- 
+----------------------------------------------------------------------
+function menu:add_item (...)
+   
+end
+-- }}}
+
+function menu.newmenu (...)
+   local obj = setmetatable({}, menu)
+   return obj
+end
+
+local function context (...)
+   return menu.newmenu(...)
+end
+
+return { context = context }
 -- }}}

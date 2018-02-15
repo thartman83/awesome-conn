@@ -20,13 +20,15 @@
 -- }}}
 
 --- awesome-conn  -- {{{
-local wibox  = require('wibox'       )
-local awful  = require('awful'       )
-local s      = require('gears.string')
-local gtable = require('gears.table' )
-local dbg    = require('debugger'    )
+local wibox   = require('wibox'       )
+local awful   = require('awful'       )
+local s       = require('gears.string')
+local gtable  = require('gears.table' )
+local radical = require('radical'     )
 
-local capi           = {timer=timer}
+local dbg     = require('debugger'    )
+
+local capi    = {timer=timer}
 
 --- String Helper Functions -- {{{
 
@@ -158,11 +160,12 @@ setmetatable(ac, {__call = function (a, ...) return ac.new(...) end })
 function ac.new (args)
    local args = args or {}
    local connmanctl_cmd = args.connmanctl_cmd or "/usr/bin/connmanctl"
+   local obj            = setmetatable({}, ac)
    
-   local obj           = setmetatable({}, ac)
-   obj.services        = {}
-   obj.connmanctl_cmd  = connmanctl_cmd
-   obj.updateCount     = semaphore.new()
+   obj.w                = wibox.widget.imagebox()
+   obj.services         = {}
+   obj.connmanctl_cmd   = connmanctl_cmd
+   obj.updateCount      = semaphore.new()
    return obj
 end
 -- }}}
@@ -348,7 +351,6 @@ function ac:update ()
                          if stderr ~= "" then
                             naughty.notify("An error occured while contacting connman: " .. stderr)
                          else
-                            dbg()
                             gtable.crush(s_tbl, self:connmanctl_parse_service(stdout))
                          end
 
@@ -369,7 +371,14 @@ end
 -- Update the awesome-conn menu
 ----------------------------------------------------------------------
 function ac:updateMenu ()
+   local menu = radical.context{}
 
+   dbg()
+   for _, v in pairs(self.services) do
+      menu:add_item { text = v }
+   end
+
+   self.w:set_menu(menu, "button:pressed", 1)
 end
 -- }}}
 

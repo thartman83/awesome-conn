@@ -42,3 +42,5 @@ luac.out
 /init.lua~
 /mocks/awful/init.lua~
 /mocks/awful/spawn.lua~
+/mocks/radical/init.lua~
+/mocks/wibox/widget/imagebox.lua~
