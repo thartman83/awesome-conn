@@ -20,15 +20,23 @@
 -- }}}
 
 --- awesome-conn  -- {{{
-local wibox   = require('wibox'       )
-local awful   = require('awful'       )
-local s       = require('gears.string')
-local gtable  = require('gears.table' )
-local radical = require('radical'     )
+local wibox     = require('wibox'       )
+local awful     = require('awful'       )
+local s         = require('gears.string')
+local gtable    = require('gears.table' )
+local radical   = require('radical'     )
+local beautiful = require('beautiful'   )
+local capi      = {timer=timer          }
 
-local dbg     = require('debugger'    )
 
-local capi    = {timer=timer}
+--- Variable definitions -- {{{
+local home_path = '/home/' .. os.getenv('USER')
+local awesome_path = home_path .. '/.config/awesome/'
+
+-- Themes define colours, icons, font and wallpapers.
+beautiful.init(awesome_path .. 'theme.lua')
+
+--}}}
 
 --- String Helper Functions -- {{{
 
@@ -162,10 +170,12 @@ function ac.new (args)
    local connmanctl_cmd = args.connmanctl_cmd or "/usr/bin/connmanctl"
    local obj            = setmetatable({}, ac)
    
-   obj.w                = wibox.widget.imagebox()
+   obj.w                = wibox.widget.textbox("CONNMAN")
    obj.services         = {}
    obj.connmanctl_cmd   = connmanctl_cmd
    obj.updateCount      = semaphore.new()
+
+   obj:update()
    return obj
 end
 -- }}}
@@ -347,7 +357,7 @@ function ac:update ()
               for _, s_tbl in ipairs(s_list) do
                  awful.spawn.easy_async(self.connmanctl_cmd .. " services " ..
                                            s_tbl["ServiceName"],
-                      function (stdout, stderr, exitreason, exitcode)
+                       function (stdout, stderr, exitreason, exitcode)
                          if stderr ~= "" then
                             naughty.notify("An error occured while contacting connman: " .. stderr)
                          else
@@ -371,14 +381,43 @@ end
 -- Update the awesome-conn menu
 ----------------------------------------------------------------------
 function ac:updateMenu ()
-   local menu = radical.context{}
+   local m = radical.context{ style = radical.style.classic }
+   m.margins.left = 10
+   m.margins.right = 10
 
-   dbg()
-   for _, v in pairs(self.services) do
-      menu:add_item { text = v }
+   for k, v in pairs(self.services) do
+      local tooltip_str = ""
+      for subk, subv in pairs(v[1]) do
+         if type(subv) == "table" then
+            local tbl = ""
+            for subsubk, subsubv in pairs(subv) do
+               local newval = ""
+               
+               if type(subsubk) == "number" then
+                  newval = subsubv
+               else
+                  newval = subsubk .. " = " .. subsubv
+               end
+
+               if tbl == "" then
+                  tbl = newval
+               else
+                  tbl = tbl .. ", " .. newval
+               end
+               
+            end
+            tooltip_str = tooltip_str .. subk .. ": " .. tbl .. "\n"
+         elseif type(subv) == "boolean" then            
+            tooltip_str = tooltip_str .. subk .. ": " .. tostring(subv) .. "\n"
+         else
+            tooltip_str = tooltip_str .. subk .. ": " .. subv .. "\n"
+         end
+      end
+      
+       m:add_item{text = k, icon = beautiful.connman_ethernet, tooltip = tooltip_str }
    end
-
-   self.w:set_menu(menu, "button:pressed", 1)
+   
+   self.w:set_menu(m, "button::pressed", 1)
 end
 -- }}}
 

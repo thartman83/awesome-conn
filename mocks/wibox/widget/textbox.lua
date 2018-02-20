@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- init.lua for wibox.widget mocks                                           --
+-- textbox.lua for wibox.widget.textbox mocks                                --
 -- Copyright (c) 2018 Tom Hartman (thomas.lees.hartman@gmail.com)            --
 --                                                                           --
 -- This program is free software; you can redistribute it and/or             --
@@ -15,10 +15,22 @@
 -------------------------------------------------------------------------------
 
 --- Commentary -- {{{
--- wibox.widget mocks
+-- wibox.widget.textbox mocks
 -- }}}
 
---- widget -- {{{
-return { imagebox = require('wibox.widget.imagebox'),
-         textbox = require('wibox.widget.textbox') }
+--- wibox.widget.textbox -- {{{
+local textbox = {}
+textbox.__index = textbox
+
+setmetatable(textbox, {__call = function (c, ...) return textbox.new() end} )
+
+function textbox.new (...)
+   local obj = setmetatable({},textbox)
+   return obj
+end
+
+function textbox:set_menu(...)
+end
+
+return textbox
 -- }}}
