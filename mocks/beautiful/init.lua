@@ -1,5 +1,5 @@
 -------------------------------------------------------------------------------
--- init.lua for radical mocks                                                --
+-- init.lua for Beautiful Mocks                                              --
 -- Copyright (c) 2018 Tom Hartman (thomas.lees.hartman@gmail.com)            --
 --                                                                           --
 -- This program is free software; you can redistribute it and/or             --
@@ -15,30 +15,25 @@
 -------------------------------------------------------------------------------
 
 --- Commentary -- {{{
--- radical mocks
+-- Beautiful mocks
 -- }}}
 
---- radical -- {{{
-local menu = { margins = { left = 0, right = 0 } }
-menu.__index = menu
+--- Beautiful Mocks -- {{{
 
---- menu:add_item -- {{{
-----------------------------------------------------------------------
--- 
-----------------------------------------------------------------------
-function menu:add_item (...)
+local beautiful = {}
+
+function beautiful.init(themepath)
+   beautiful.radical                   = {}
+   beautiful.radical.menu              = {}
+   beautiful.radical.style             = nil
+   beautiful.radical.menu.margin_left  = 10
+   beautiful.radical.menu.margin_right = 10
    
-end
--- }}}
-
-function menu.newmenu (...)
-   local obj = setmetatable({}, menu)
-   return obj
+   beautiful.connman                   = {}
+   beautiful.connman.icons             = {}
+   beautiful.connman.icons.ethernet    = "ethernet.png"
 end
 
-local function context (...)
-   return menu.newmenu(...)
-end
+return beautiful
 
-return { context = context, style = { classic = 1} }
 -- }}}

@@ -29,6 +29,8 @@ local beautiful = require('beautiful'   )
 local capi      = {timer=timer          }
 
 
+beautiful.init()
+
 --- Variable definitions -- {{{
 local home_path = '/home/' .. os.getenv('USER')
 local awesome_path = home_path .. '/.config/awesome/'
@@ -381,9 +383,11 @@ end
 -- Update the awesome-conn menu
 ----------------------------------------------------------------------
 function ac:updateMenu ()
-   local m = radical.context{ style = radical.style.classic }
-   m.margins.left = 10
-   m.margins.right = 10
+   local m         = radical.context{ style = beautiful.radical.menu.style or
+                                         radical.style.classic }
+   
+   m.margins.left  = beautiful.radical.menu.margin_left  or 10
+   m.margins.right = beautiful.radical.menu.margin_right or 10
 
    for k, v in pairs(self.services) do
       local tooltip_str = ""
