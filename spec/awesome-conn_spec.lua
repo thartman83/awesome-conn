@@ -75,33 +75,19 @@ describe("a set of tests for connmanctl output parsing", function ()
 
   --- connmanctl_parse_services_list -- {{{
   describe("tests for parsing service list output", function ()
-    it("should return a tbl w/ all of the services organized by techology name",
+    it("should return a tbl w/ all of the services",
        function ()
           local awesome_conn = require('awesome-conn')()
           local txt          = freadall("test-output/services-list.txt")
           local t            = awesome_conn:connmanctl_parse_services_list(txt)
-
-          assert.are.equal(2, #keys(t)                   )
-          assert.are.equal(1, #t["ethernet_080027606158"])
-          assert.are.equal(4, #t["wifi_dc85de828967"    ])
-
-          assert.are.equal("Wired", t["ethernet_080027606158"][1]["Name"])
-          assert.are.equal("ethernet_080027606158_cable",
-                           t["ethernet_080027606158"][1]["ServiceName"])
-
-          assert.are.equal("OtherNET"     , t["wifi_dc85de828967"][1]["Name"])
-          assert.are.equal("AnotherOne"   , t["wifi_dc85de828967"][2]["Name"])
-          assert.are.equal("FourthNetwork", t["wifi_dc85de828967"][3]["Name"])
-          assert.are.equal("AnOpenNetwork", t["wifi_dc85de828967"][4]["Name"])
+          local keys         = keys(t)
           
-          assert.are.equal("wifi_dc85de828967_38303944616e69656c73_managed_psk",
-                           t["wifi_dc85de828967"][1]["ServiceName"])
-          assert.are.equal("wifi_dc85de828967_3257495245363836_managed_wep",
-                           t["wifi_dc85de828967"][2]["ServiceName"])
-          assert.are.equal("wifi_dc85de828967_4d7572706879_managed_wep",
-                           t["wifi_dc85de828967"][3]["ServiceName"])
-          assert.are.equal("wifi_dc85de828967_4d6568657272696e_managed_none",
-                           t["wifi_dc85de828967"][4]["ServiceName"])
+          assert.are.equal(5, #keys)          
+          assert.is_true(t["ethernet_080027606158_cable"] ~= nil)
+          assert.is_true(t["wifi_dc85de828967_38303944616e69656c73_managed_psk"] ~= nil)
+          assert.is_true(t["wifi_dc85de828967_3257495245363836_managed_wep"] ~= nil)
+          assert.is_true(t["wifi_dc85de828967_4d7572706879_managed_wep"] ~= nil)
+          assert.is_true(t["wifi_dc85de828967_4d6568657272696e_managed_none"] ~= nil)
     end)
   end)
   -- }}}
@@ -175,14 +161,14 @@ end)
 
 --- awesome-conn update tests -- {{{
 describe("a suite of tests for the awesome-conn:update method", function()
-  it("should cycle through .", function ()
-        local awesome_conn = require('awesome-conn')()
-        spy.on(awesome_conn, "updateMenu")
+  it("should cycle through each available service.", function ()
+        local ac = require('awesome-conn')()
+        spy.on(ac, "updateMenu")
         
-        awesome_conn:update()
-        assert.are.equal(2,awesome_conn:serviceCount())
-        assert.spy(awesome_conn.updateMenu).was_called()
-        assert.is_true(awesome_conn.updateCount:isFree())
+        ac:update()
+        assert.are.equal(2,#keys(ac.services))
+        assert.spy(ac.updateMenu).was_called()
+        assert.is_true(ac.updateCount:isFree())
   end)
 end)
 -- }}}

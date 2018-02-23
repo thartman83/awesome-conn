@@ -28,6 +28,7 @@ local radical   = require('radical'     )
 local beautiful = require('beautiful'   )
 local capi      = {timer=timer          }
 
+local dbg       = require('debugger'    )
 
 beautiful.init()
 
@@ -125,6 +126,19 @@ function gtable.noblanks (t, nowhitespaces)
 end
 -- }}}
 
+--- gtable.keys -- {{{
+----------------------------------------------------------------------
+-- Return an array of the keys in a table
+----------------------------------------------------------------------
+function gtable.keys (t)
+   local retval = {}
+   for k,v in pairs(t) do
+      table.insert(retval, k)
+   end
+   return retval
+end
+-- }}}
+
 -- }}}
 
 --- semaphore Functions -- {{{
@@ -182,6 +196,68 @@ function ac.new (args)
 end
 -- }}}
 
+--- enums -- {{{
+ac.TechType = { ethernet = "ethernet", wifi = "wifi", tether = "tether",
+                cellular = "cellular", gadget = "gadget" }
+-- }}}
+
+--- Services Accessors -- {{{
+-- Functions to get service information from the properties returned from connmanctl
+
+--- ac:getTechType -- {{{
+----------------------------------------------------------------------
+-- 
+----------------------------------------------------------------------
+function ac:getServiceTechType (serviceName)
+   local serviceTbl = self.services[serviceName]
+
+   if serviceTbl == nil then
+      return
+   end
+
+   return ac.TechType[serviceTbl.props.Type]
+end
+-- }}}
+
+--- ac:getTechTypes -- {{{
+----------------------------------------------------------------------
+-- Return a list of tech types available given the list of current services
+----------------------------------------------------------------------
+function ac:getTechTypes ()
+   local retval = {}
+   local temp   = {}
+   
+   for k,_ in self.services do
+      temp[k] = true
+   end
+
+   for _,v in temp do
+      retval.insert(v)
+   end
+
+   return retval
+end
+-- }}}
+
+--- ac:getServiceByTechType -- {{{
+----------------------------------------------------------------------
+-- Return a list of services based on a certain tech type
+----------------------------------------------------------------------
+function ac:getServiceByTechType (techType)
+   local retval = {}
+
+   for _,v in self.services do
+      if v.props.Type == techType then
+         retval.insert(v)
+      end
+   end
+
+   return retval
+end
+-- }}}
+
+-- }}}
+
 --- connmanctl_parse_technologies -- {{{
 ----------------------------------------------------------------------
 -- Parse the list of technologies from connman
@@ -222,7 +298,7 @@ function ac:connmanctl_parse_technologies (technologies)
 end
 -- }}}
 
---- connmanctl_parse_services_list -- {{{
+--- connmanctl_parse_services_list -- {{{c
 ----------------------------------------------------------------------
 -- Parse the list of servers grouping by technology
 --
@@ -254,24 +330,9 @@ function ac:connmanctl_parse_services_list (services_list)
    local lines = gtable.noblanks(s.lines(services_list))
    for _, line in ipairs(lines) do            
       local parts = gtable.noblanks(s.split(line, " "))
+      local serviceName = parts[#parts == 3 and 3 or 2]
 
-      local common_name, service_name
-
-      common_name  = parts[#parts == 2 and 1 or 2]
-      service_name = parts[#parts == 3 and 3 or 2]
-
-      local service_name_parts = s.split(service_name, "_")
-      local tech_name          = service_name_parts[1] .. "_" ..
-         service_name_parts[2]
-      
-      if retval[tech_name] == nil then
-         retval[tech_name] = {}
-      end
-
-      table.insert(retval[tech_name],
-                   { Name = common_name,
-                     ServiceName = service_name })
-
+      retval[serviceName] = {} 
    end
 
    return retval
@@ -340,8 +401,7 @@ end
 ----------------------------------------------------------------------
 -- 
 ----------------------------------------------------------------------
-function ac:update ()
-   
+function ac:update ()   
    self.updateCount:clear()
    awful.spawn.easy_async(self.connmanctl_cmd .. " services",
         function (stdout, stderr, exitreason, exitcode)           
@@ -351,28 +411,26 @@ function ac:update ()
            end
 
            self.services = self:connmanctl_parse_services_list(stdout)
-           self.updateCount:increment(self:serviceCount())
+           self.updateCount:increment(#gtable.keys(self.services))
            
-           -- Loop over each technology service table
-           for _, s_list in pairs(self.services) do
-              -- Loop over each service in the service table
-              for _, s_tbl in ipairs(s_list) do
-                 awful.spawn.easy_async(self.connmanctl_cmd .. " services " ..
-                                           s_tbl["ServiceName"],
-                       function (stdout, stderr, exitreason, exitcode)
-                         if stderr ~= "" then
-                            naughty.notify("An error occured while contacting connman: " .. stderr)
-                         else
-                            gtable.crush(s_tbl, self:connmanctl_parse_service(stdout))
-                         end
-
-                         self.updateCount:decrement()
-
-                         if self.updateCount:isFree() then
-                            self:updateMenu()
-                         end
-                 end)
-              end
+           
+           -- Loop over each service in the service table
+           for serviceName, s_tbl in pairs(self.services) do
+              awful.spawn.easy_async(self.connmanctl_cmd .. " services " ..
+                                        serviceName,
+                 function (stdout, stderr, exitreason, exitcode)
+                    if stderr ~= "" then
+                       naughty.notify("An error occured while contacting connman: " .. stderr)
+                    else
+                       s_tbl.props = self:connmanctl_parse_service(stdout)
+                    end
+                    
+                    self.updateCount:decrement()
+                    
+                    if self.updateCount:isFree() then
+                       self:updateMenu()
+                    end
+              end)
            end
    end)
 end
@@ -385,42 +443,7 @@ end
 function ac:updateMenu ()
    local m         = radical.context{ style = beautiful.radical.menu.style or
                                          radical.style.classic }
-   
-   m.margins.left  = beautiful.radical.menu.margin_left  or 10
-   m.margins.right = beautiful.radical.menu.margin_right or 10
-
-   for k, v in pairs(self.services) do
-      local tooltip_str = ""
-      for subk, subv in pairs(v[1]) do
-         if type(subv) == "table" then
-            local tbl = ""
-            for subsubk, subsubv in pairs(subv) do
-               local newval = ""
-               
-               if type(subsubk) == "number" then
-                  newval = subsubv
-               else
-                  newval = subsubk .. " = " .. subsubv
-               end
-
-               if tbl == "" then
-                  tbl = newval
-               else
-                  tbl = tbl .. ", " .. newval
-               end
-               
-            end
-            tooltip_str = tooltip_str .. subk .. ": " .. tbl .. "\n"
-         elseif type(subv) == "boolean" then            
-            tooltip_str = tooltip_str .. subk .. ": " .. tostring(subv) .. "\n"
-         else
-            tooltip_str = tooltip_str .. subk .. ": " .. subv .. "\n"
-         end
-      end
-      
-       m:add_item{text = k, icon = beautiful.connman_ethernet, tooltip = tooltip_str }
-   end
-   
+         
    self.w:set_menu(m, "button::pressed", 1)
 end
 -- }}}
