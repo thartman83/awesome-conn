@@ -54,32 +54,13 @@ end
 --- connmanctl parser tests -- {{{
 describe("a set of tests for connmanctl output parsing", function ()
 
-  -- connmanctl_parse_technologies -- {{{
-  describe("tests for parsing technology output", function ()
-    it("should return a table with a single entry describing an ethernet port",
-       function ()
-          local awesome_conn = require('awesome-conn')()
-          local txt          = freadall("test-output/tech_eth_only.txt")
-          local t            = awesome_conn:connmanctl_parse_technologies(txt)
-
-          assert.are.equal(1, #t)
-          assert.are.equal("Wired"    , t[1]["Name"    ])
-          assert.are.equal("ethernet" , t[1]["Type"    ])
-          
-          assert.is_true  (t[1]["Powered"   ])
-          assert.is_true  (t[1]["Connected" ])
-          assert.is_false (t[1]["Tethering" ])
-    end)
-  end)
-  -- }}}
-
-  --- connmanctl_parse_services_list -- {{{
+  --- connmanctlParseServicesList -- {{{
   describe("tests for parsing service list output", function ()
     it("should return a tbl w/ all of the services",
        function ()
           local awesome_conn = require('awesome-conn')()
           local txt          = freadall("test-output/services-list.txt")
-          local t            = awesome_conn:connmanctl_parse_services_list(txt)
+          local t            = awesome_conn:connmanctlParseServicesList(txt)
           local keys         = keys(t)
           
           assert.are.equal(5, #keys)          
@@ -92,12 +73,12 @@ describe("a set of tests for connmanctl output parsing", function ()
   end)
   -- }}}
 
-  --- connmanctl_parse_service -- {{{
+  --- connmanctlParseService -- {{{
   describe("test for parsing service information", function ()
     it("should return a tbl w/ information about an eth service", function ()
           local awesome_conn = require('awesome-conn'    )()
           local txt          = freadall('test-output/services-output.txt')
-          local t            = awesome_conn:connmanctl_parse_service(txt)
+          local t            = awesome_conn:connmanctlParseService(txt)
 
           assert.are.equal(22, #keys(t))
           assert.are.equal("/net/connman/service/ethernet_080027606158_cable",

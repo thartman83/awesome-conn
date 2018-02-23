@@ -258,47 +258,7 @@ end
 
 -- }}}
 
---- connmanctl_parse_technologies -- {{{
-----------------------------------------------------------------------
--- Parse the list of technologies from connman
--- There are 5 network types recognized by connman
---  - ethernet
---  - gadget
---  - wifi
---  - bluetooth
---  - cellular
-----------------------------------------------------------------------
-function ac:connmanctl_parse_technologies (technologies)
-   local lines = s.lines(technologies)
-
-   -- Pop the first line
-   table.remove(lines,1)
-
-   local t = {}
-   t[1] = {}
-   
-   for i,line in ipairs(lines) do
-      local kvpair = s.split(line, "=")
-      if #kvpair == 2 then 
-         local key   = s.trim(kvpair[1])
-         local value = s.trim(kvpair[2])                          
-         
-         if value == "True" then
-            t[1][key] = true
-         elseif value == "False" then
-            t[1][key] = false
-         else
-            t[1][key] = value
-         end
-
-      end
-   end
-   
-   return t
-end
--- }}}
-
---- connmanctl_parse_services_list -- {{{c
+--- connmanctlParseServicesList -- {{{c
 ----------------------------------------------------------------------
 -- Parse the list of servers grouping by technology
 --
@@ -324,7 +284,7 @@ end
 --                                }
 --     }
 ----------------------------------------------------------------------
-function ac:connmanctl_parse_services_list (services_list)
+function ac:connmanctlParseServicesList (services_list)
    local retval = {}
    
    local lines = gtable.noblanks(s.lines(services_list))
@@ -339,14 +299,14 @@ function ac:connmanctl_parse_services_list (services_list)
 end
 -- }}}
 
---- connmanctl_parse_service -- {{{
+--- connmanctlParseService -- {{{
 ----------------------------------------------------------------------
 -- Parse connman information from an individual service
 --
 -- Parse the output of `connmanctl services [servicename]' into a
 -- table with kv pairs for each service property.
 ----------------------------------------------------------------------
-function ac:connmanctl_parse_service (service)
+function ac:connmanctlParseService (service)
    local retval = {}
    local lines = gtable.noblanks(s.lines(service))
    
@@ -410,7 +370,7 @@ function ac:update ()
               return
            end
 
-           self.services = self:connmanctl_parse_services_list(stdout)
+           self.services = self:connmanctlParseServicesList(stdout)
            self.updateCount:increment(#gtable.keys(self.services))
            
            
@@ -422,7 +382,7 @@ function ac:update ()
                     if stderr ~= "" then
                        naughty.notify("An error occured while contacting connman: " .. stderr)
                     else
-                       s_tbl.props = self:connmanctl_parse_service(stdout)
+                       s_tbl.props = self:connmanctlParseService(stdout)
                     end
                     
                     self.updateCount:decrement()
