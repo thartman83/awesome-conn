@@ -204,7 +204,7 @@ ac.TechType = { ethernet = "ethernet", wifi = "wifi", tether = "tether",
 --- Services Accessors -- {{{
 -- Functions to get service information from the properties returned from connmanctl
 
---- ac:getTechType -- {{{
+--- getTechType -- {{{
 ----------------------------------------------------------------------
 -- 
 ----------------------------------------------------------------------
@@ -219,7 +219,7 @@ function ac:getServiceTechType (serviceName)
 end
 -- }}}
 
---- ac:getTechTypes -- {{{
+--- getTechTypes -- {{{
 ----------------------------------------------------------------------
 -- Return a list of tech types available given the list of current services
 ----------------------------------------------------------------------
@@ -239,7 +239,7 @@ function ac:getTechTypes ()
 end
 -- }}}
 
---- ac:getServiceByTechType -- {{{
+--- getServiceByTechType -- {{{
 ----------------------------------------------------------------------
 -- Return a list of services based on a certain tech type
 ----------------------------------------------------------------------
@@ -263,25 +263,12 @@ end
 -- Parse the list of servers grouping by technology
 --
 -- Parse the output of `connmanctl services' into a table with keys
--- for each available device and sub tables of each available service
--- to that device.
+-- for each available service. The table associated with each property
+-- is assigned later.
 --
--- eg: { ethernet_080027606158 -> {
---                                  {
---                                    name -> Wired,
---                                    ServiceName -> ethernet_080027606158_cable
---                                  }
---                                },
---       wifi_dc85de828967 ->     {
---                                  {
---                                    name -> WifiNetwork,
---                                    ServiceName -> wifi_dc85de828967_38303944616e69656c73_managed_psk
---                                  },
---                                  {
---                                    name -> OtherWifiNetwork,
---                                    ServiceName -> wifi_dc85de828967_32574952453638367_managed_wep
---                                  }
---                                }
+-- eg: { ethernet_080027606158_cable                        -> {},     
+--       wifi_dc85de828967_38303944616e69656c73_managed_psk -> {},
+--       wifi_dc85de828967_32574952453638367_managed_wep    -> {}
 --     }
 ----------------------------------------------------------------------
 function ac:connmanctlParseServicesList (services_list)
@@ -382,7 +369,7 @@ function ac:update ()
                     if stderr ~= "" then
                        naughty.notify("An error occured while contacting connman: " .. stderr)
                     else
-                       s_tbl.props = self:connmanctlParseService(stdout)
+                       s_tbl = self:connmanctlParseService(stdout)                       
                     end
                     
                     self.updateCount:decrement()
