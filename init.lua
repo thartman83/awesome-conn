@@ -46,14 +46,14 @@ end
 -- 
 function ac:scan ()
    if self.scanning then
-      print("Already scanning, please wait")
+      naughty.notify { text="Already Scanning, please wait" }
    else
       self.scanning = true
       awful.spawn.easy_async({ "connmanctl", "scan", "wifi" },
          function (so, se, er, ec)
             self.scanning = false
             if ec ~= 0 or se ~= "" then
-               naught.notify({title = "Error Scanning for Wifi",
+               naughty.notify({title = "Error Scanning for Wifi",
                               text = "An error occured while scanning wifi: " .. error_reason ..
                                  " " .. strerr, timeout = 0})
             else
@@ -67,7 +67,19 @@ end
 --- ac:build_connect_fn -- {{{
 -- 
 function ac:build_connect_fn (service)
-   
+   return function ()
+      local service_id = service.object_path:gsub("/.*/","")
+
+      awful.spawn.easy_async( { "connmanctl", "connect", service_id },
+         function (so, se, er, ec)
+            if se ~= "" or ec ~= 0 then
+               naughty.notify { text = "Error occured while connecting: " .. se }
+            else               
+               naughty.notify( { text = "Connected to " .. service.Name } )
+            end
+         end
+      )
+   end
 end
 -- }}}
 
