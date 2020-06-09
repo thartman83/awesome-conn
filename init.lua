@@ -83,6 +83,31 @@ function ac:build_connect_fn (service)
 end
 -- }}}
 
+--- ac:build_menu_item -- {{{
+-- 
+function ac:build_menu_item (service)
+   local lock_glyph = "🔒 "
+   local heart_glyph = "❤ "
+   local check_glyph = "✓ "
+
+   local item_name = ""
+
+   if service.State == "online" then
+      item_name = item_name .. check_glyph
+   elseif service.Favorite then
+      item_name = item_name .. heart_glyph
+   end
+      
+   if #(service.Security) ~= 0 then
+      item_name = item_name .. lock_glyph
+   end
+
+   item_name = item_name .. service.Name
+
+   return { item_name, self:build_connect_fn(service) }   
+end
+-- }}}
+
 --- w:update -- {{{
 ----------------------------------------------------------------------
 -- Update the widget
@@ -96,7 +121,7 @@ function ac:update ()
    self._menu_tbl = { { "Scan...", function () self:scan() end }, { "" } }
    for k,v in pairs(self._connMgr.services) do
       if v.Name ~= nil then
-         table.insert(self._menu_tbl, { v.Name, self:build_connect_fn(v) })
+         table.insert(self._menu_tbl, self:build_menu_item(v))
       end
    end
 
@@ -109,13 +134,6 @@ end
 -- 
 function ac:toggle_menu ()
    self._menu:toggle()
-   -- if self._menu.visible then
-   --    self._menu:hide()
-   --    self._menu.visible = false
-   -- else
-   --    self._menu.visible = true
-   --    self._menu:show()
-   -- end
 end
 -- }}}
    
@@ -125,17 +143,15 @@ end
 ----------------------------------------------------------------------
 local function new (...)
    local w        = wibox.layout.fixed.horizontal()
-   w._props       = {}
-   w._techs       = {}
-   w._services    = {} 
    w._connIcon    = wibox.widget {image = nil,
                                   resize = false,
                                   widget = wibox.widget.imagebox}
    w._serviceInfo = wibox.widget {markup = 'placeholder',
                                   align = "center",
                                   valign = "center",
+                                  resize = true,
                                   widget = wibox.widget.textbox}
-   w:add(w._connIcon, w._serviceInfo)   
+   w:add(w._connIcon, w._serviceInfo)
    
    gtable.crush(w, ac, true)
    w._connMgr = connman
