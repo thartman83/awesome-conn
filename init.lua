@@ -30,6 +30,7 @@ local connman   = require('connman_dbus')
 local serpent   = require('serpent'     )
 local naughty   = require('naughty'     )
 local beautiful = require('beautiful'   )
+local capi      = {timer = timer}
 local ac        = {}
 -- }}}
 
@@ -137,7 +138,6 @@ end
 --- ac:fit -- {{{
 -- 
 function ac:fit (ctx, width, height)
-   print("ac: " .. width .. " " .. height)
    return height, height
 end
 -- }}}
@@ -154,7 +154,6 @@ end
 --- ac:drawWifi -- {{{
 -- 
 function ac:drawWifi (w, cr, width, height)
-   print(width .. " " .. height)
    local M_PI = 3.1459
    local bars = round((self._cur_service.Strength * 5) / 100)
 
@@ -164,8 +163,7 @@ function ac:drawWifi (w, cr, width, height)
    local theda = M_PI / 5
    local bottom_pad = 4
 
-   print(bars)
-   for i=bars,1,-1 do
+   for i=1,bars do
       cr:arc(width / 2, height - bottom_pad, (width / 2) - (i*2), M_PI + theda, -theda)
       cr:stroke()      
    end
@@ -184,9 +182,11 @@ end
 -- 
 ----------------------------------------------------------------------
 local function new (...)
-   local w        = wibox.widget.base.empty_widget()
+   local w        = wibox.widget.base.empty_widget()   
    gtable.crush(w, ac, true)
    w._connMgr = connman
+   w._timeout = 20
+   w._timer = capi.timer({timeout=w._timeout})
 
    -- Connect up the signals
    connman:connect_signal(
@@ -207,6 +207,10 @@ local function new (...)
    w:buttons(gtable.join(awful.button({}, 1,
                             function ()
                                w:toggle_menu() end)))
+
+   -- Setup the update timer
+   w._timer:connect_signal("timeout", function() w:update() end)
+   w._timer:start()
 
    w.scanning = false
    w:update()
